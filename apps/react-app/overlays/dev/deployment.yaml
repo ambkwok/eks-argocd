@@ -1,0 +1,24 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: react-app
+spec:
+  selector:
+    matchLabels:
+      app: react-app
+  template:
+    spec:
+      containers:
+        - name: react-app-container
+          image: 000000000000.dkr.ecr.us-east-1.amazonaws.com/react-app:latest
+          env:
+            - name: ENV
+              value: "develop"
+          resources:
+            limits:
+              memory: 2048M
+              cpu: "2.0"
+            requests:
+              memory: 1024M
+              cpu: "1.0"

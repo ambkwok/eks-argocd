@@ -1,0 +1,24 @@
+---
+- op: replace
+  path: /spec/template/spec/containers/0/image
+  value: 000000000000.dkr.ecr.us-east-1.amazonaws.com/react-app:v1.0.0
+
+- op: replace
+  path: /spec/template/spec/containers/0/env
+  value:
+    - name: ENV
+      value: "prod"
+
+- op: replace
+  path: /spec/template/spec/containers/0/resources
+  value:
+    limits:
+      memory: 1024M
+      cpu: "1.0"
+    requests:
+      memory: 256M
+      cpu: "0.25"
+
+- op: replace
+  path: /spec/replicas
+  value: 3

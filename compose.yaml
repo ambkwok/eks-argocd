@@ -1,0 +1,26 @@
+---
+services:
+  aws:
+    image: amazon/aws-cli:2.24.14
+    volumes:
+      - ./.aws:/root/.aws
+      # - $(pwd):/aws
+    command: ["/bin/bash", "-c", "/usr/local/bin/aws --version"]
+    entrypoint: ""
+    restart: "no"
+    hostname: aws
+
+  terraform:
+    image: docker.io/hashicorp/terraform:1.11.0
+    container_name: terraform
+    volumes:
+      - ./.aws:/root/.aws
+      - ./terraform:/terraform
+    environment:
+      - KUBE_EDITOR=nano
+    command: ["/bin/sh", "-c", "/bin/terraform init"]
+    entrypoint: ""
+    working_dir: /terraform
+    restart: "no"
+    hostname: terraform
+    network_mode: host

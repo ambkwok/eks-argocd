@@ -1,0 +1,42 @@
+---
+global:
+  domain: ""
+
+server:
+  replicas: 1
+  service:
+    type: ClusterIP
+  ingress:
+    enabled: true
+    ingressClassName: alb
+    annotations:
+      kubernetes.io/ingress.class: alb
+      alb.ingress.kubernetes.io/scheme: internet-facing
+      alb.ingress.kubernetes.io/target-type: ip
+
+controller:
+  replicas: 1
+
+repoServer:
+  replicas: 1
+
+applicationSet:
+  replicaCount: 1
+
+redis-ha:
+  enabled: false
+
+configs:
+  params:
+    server.insecure: true
+  cm:
+    resource.compareoptions: |
+      ignoreAggregatedRoles: true
+    kustomize.buildOptions: --enable-helm --load-restrictor LoadRestrictionsNone
+    resource.exclusions: |
+      - apiGroups:
+        - cilium.io
+        kinds:
+        - CiliumIdentity
+        clusters:
+        - "*"    

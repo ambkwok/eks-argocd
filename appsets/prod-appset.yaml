@@ -1,0 +1,91 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: prod-appset
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/compare-options: ServerSideDiff=true,IncludeMutationWebhook=true
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - git:
+        repoURL: https://github.com/ambkwok/eks-argocd.git
+        revision: HEAD
+        directories:
+          - path: apps/*/overlays/prod
+  strategy:
+    type: RollingSync
+    rollingSync:
+      steps:
+        - matchExpressions:
+            - key: type
+              operator: In
+              values:
+                - cluster-config
+        - matchExpressions:
+            - key: type
+              operator: In
+              values:
+                - apps
+  template:
+    metadata:
+      # name: "{{index .path.segments 1}}-{{index .path.segments 3}}"
+      name: "{{index .path.segments 1}}"
+      labels:
+        type: "{{index .path.segments 0}}"
+      annotations:
+        argocd.argoproj.io/compare-options: ServerSideDiff=true,IncludeMutationWebhook=true
+    spec:
+      # The project the application belongs to.
+      project: default
+
+      # Source of the application manifests
+      source:
+        repoURL: https://github.com/ambkwok/eks-argocd.git
+        targetRevision: HEAD
+        path: "{{.path.path}}"
+
+      # Destination cluster and namespace to deploy the application
+      destination:
+        server: https://kubernetes.default.svc
+        # namespace: "{{index .path.segments 1}}-{{index .path.segments 3}}"
+        namespace: "{{index .path.segments 1}}"
+
+      ignoreDifferences:
+        # Kyverno auto-generates rules to make policies smarter. We want ArgoCD to
+        # ignore the auto-generated rules.
+        # For more information: https://kyverno.io/docs/writing-policies/autogen/
+        - group: kyverno.io
+          kind: ClusterPolicy
+          jqPathExpressions:
+            - .spec.rules[] | select( .name | startswith("autogen-") )
+        # https://github.com/metallb/metallb/issues/1681
+        - group: "apiextensions.k8s.io"
+          kind: CustomResourceDefinition
+          name: bgppeers.metallb.io
+          jsonPointers:
+            - /spec/conversion/webhook/clientConfig/caBundle
+        - group: "apiextensions.k8s.io"
+          kind: CustomResourceDefinition
+          name: addresspools.metallb.io
+          jsonPointers:
+            - /spec/conversion/webhook/clientConfig/caBundle
+
+      # Sync policy
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
+          - RespectIgnoreDifferences=true
+        automated:  # automated sync by default retries failed attempts 5 times with following delays between attempts ( 5s, 10s, 20s, 40s, 80s ); retry controlled using `retry` field.
+          prune: true  # Specifies if resources should be pruned during auto-syncing ( false by default ).
+          selfHeal: true  # Specifies if partial app sync should be executed when resources are changed only in target Kubernetes cluster and no git change detected ( false by default ).
+          allowEmpty: true
+        retry:
+          limit: 5  # Maximum number of retries
+          backoff:
+            duration: 5s  # Initial retry interval
+            factor: 2  # Multiplication factor for the backoff
+            maxDuration: 1m  # Maximum retry interval
